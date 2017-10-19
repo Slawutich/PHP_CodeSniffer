@@ -16,6 +16,13 @@ use PHP_CodeSniffer\Util\Tokens;
 class ArrayDeclarationSniff implements Sniff
 {
 
+    /**
+     * Allow single-line declaration of indexed arrays
+     *
+     * @var boolean
+     */
+    public $allowSingleLineIndexedArrays = false;
+
 
     /**
      * Returns an array of tokens this test wants to listen for.
@@ -235,8 +242,16 @@ class ArrayDeclarationSniff implements Sniff
                 $nestedParenthesis = array_pop($nested);
             }
 
-            if ($nestedParenthesis === false
-                || $tokens[$nestedParenthesis]['line'] !== $tokens[$stackPtr]['line']
+            $nextCloseParenthesis = $phpcsFile->findNext(T_CLOSE_PARENTHESIS, ($stackPtr + 1));
+            $isAssociative        = $phpcsFile->findNext(T_DOUBLE_ARROW, ($stackPtr + 1), $nextCloseParenthesis);
+
+            $checkSingleLineNotAllowed = true;
+            if ($this->allowSingleLineIndexedArrays === true && $isAssociative === false) {
+                $checkSingleLineNotAllowed = false;
+            }
+
+            if ($checkSingleLineNotAllowed === true && ($nestedParenthesis === false
+                || $tokens[$nestedParenthesis]['line'] !== $tokens[$stackPtr]['line'])
             ) {
                 $error = 'Array with multiple values cannot be declared on a single line';
                 $fix   = $phpcsFile->addFixableError($error, $stackPtr, 'SingleLineNotAllowed');
